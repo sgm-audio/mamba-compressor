@@ -277,7 +277,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/mamba-compressor/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/mamba-compressor/discussions)
-- **Email**: your.email@example.com
+- **Email**: scott@sgmstudios.ca
 
 ---
 
