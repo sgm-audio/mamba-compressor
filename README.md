@@ -8,31 +8,41 @@
 [![NVIDIA NeMo](https://img.shields.io/badge/NVIDIA--NeMo-1.0+-76b900?logo=nvidia)](https://developer.nvidia.com/nemo)
 [![Mamba SSM](https://img.shields.io/badge/Mamba--SSM-Latest-purple)](https://github.com/state-spaces/mamba)
 
-A professional-grade, context-aware dynamic audio processor that replaces heuristic compression rules with learned musical intelligence. Built on **Mamba Selective State Space Models (SSMs)** for linear-time temporal reasoning and **Differentiable DSP** for interpretable, phase-coherent signal processing.
+> "The model will learn to do what took you 20 years to internalize: hear the last 60 seconds of musical context and decide right now whether to clamp, breathe, or get out of the way."
 
-## 🎯 The Problem
+MambaCompressor is a professional-grade audio processor that replaces heuristic compression rules with **learned musical intelligence**. It uses **Mamba Selective State Space Models (SSMs)** for linear-time temporal reasoning and **Differentiable DSP** for interpretable, phase-coherent signal processing.
 
-Traditional compressors react to instantaneous amplitude. They don't "hear" musical context:
-- A kick transient in a sparse section needs **fast attack, preserved punch**
-- A sustained vocal chorus needs **slow attack, glue, RMS lift**
-- A breakdown→drop transition needs **anticipatory gain reduction before the hit**
-- A distorted guitar wall needs **back off — already perceptually loud**
-- Silence→entry needs **full release, no pumping artifact**
+## ⚡ Zero-to-Hero: Process Audio in 3 Lines
 
-None of these decisions are computable from a single sample. They require **2–8 seconds of temporal context**.
+```python
+from src import ContextAwareCompressor, load_audio, save_audio
+model = ContextAwareCompressor.from_pretrained("mamba-compressor-base").cuda()
+audio, sr = load_audio("input.wav")
+output = model(audio.cuda())
+save_audio("output.wav", output, sr)
+```
 
-## 🏗️ The Solution
+## 🎯 The "Why": SSM vs. Traditional Compression
 
-**MambaCompressor** decomposes the problem:
-1. **Mamba Context Tower**: Reads audio semantically (via Mel spectrograms) and maintains a hidden state encoding everything heard in the last N seconds.
-2. **Parameter Head**: Emits time-varying compressor envelopes (`gain_db(t)`, `attack(t)`, `release(t)`) based on musical context.
-3. **Differentiable DSP**: Applies real DSP ballistics (IIR smoothing, lookahead buffering) to the audio, keeping the gradient path clean and the output interpretable.
+### The Problem: Heuristic Blindness
+Traditional compressors (even high-end hardware) react to instantaneous amplitude or short RMS windows. They are **context-blind**:
+- A kick drum needs the same attack setting whether it's in a sparse intro or a dense chorus.
+- A vocal needs the same release whether it's a whisper or a scream.
+- **Result**: "Pumping" artifacts, lost transients, and a lack of "glue."
+
+### The Solution: Selective State Space Models
+MambaCompressor uses **Mamba SSMs** to maintain a deep hidden state of the musical history.
+- **Long Context**: While Transformers scale quadratically ($O(N^2)$), Mamba scales **linearly** ($O(N)$). It can "remember" 60+ seconds of audio with minimal memory overhead.
+- **Musical Intelligence**: The model "hears" a transition coming and pre-adjusts gain. It recognizes a genre and applies appropriate ballistics.
+- **Interpretable DSP**: We don't use a "black box" neural network to generate audio. We use Mamba to **predict the parameters** of a real, differentiable compressor. You get the intelligence of AI with the phase-coherence of professional DSP.
+
+## 🏗️ How it Works
 
 ```
 Audio → Mel Encoder → Mamba Context Tower → Parameter Head → Differentiable DSP → Output
                               ↑
                     "What is happening musically
-                     across the last N seconds?"
+                     across the last 60 seconds?"
                               ↓
                     gain_reduction(t), attack(t),
                     release(t), threshold(t)  ← all time-varying
@@ -42,11 +52,9 @@ Audio → Mel Encoder → Mamba Context Tower → Parameter Head → Differentia
 
 - ✅ **Interpretable Gain Envelopes**: Visualize, override, or sidechain hardware with the model's decisions.
 - ✅ **Linear-Time Complexity**: Mamba SSMs handle minute-long contexts without quadratic memory explosion.
-- ✅ **Sub-5ms Latency**: Optimized for real-time inference on NVIDIA GPUs (RTX 4090, H100).
+- ✅ **Sub-5ms Latency**: Optimized for real-time inference on NVIDIA GPUs.
 - ✅ **Blind Training**: No paired (dry/wet) data required; uses synthetic corruption + perceptual self-consistency.
 - ✅ **Anti-Collapse Losses**: Crest factor preservation and multi-resolution STFT prevent dynamic range squashing.
-- ✅ **NeMo Integration**: Wrapped in NVIDIA NeMo's `ModelPT` for FP8 mixed-precision and distributed training.
-- ✅ **TensorRT-LLM Ready**: Designed for deployment with custom CUDA kernels (`causal_conv1d`, `selective_scan_fn`).
 
 ## 🚀 Quick Start
 
