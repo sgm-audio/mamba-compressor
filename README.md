@@ -48,7 +48,7 @@ y = comp(audio, {"gain_db": g, "attack_ms": a, "release_ms": r})   # each (B, fr
 
 ```bash
 pip install torch pytest ruff     # CPU torch is enough
-scripts/ci.sh                     # compileall, ruff (errors only), pytest
+bash scripts/ci.sh                # compileall, ruff (errors only), pytest
 ```
 
 ## Install
