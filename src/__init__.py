@@ -1,43 +1,35 @@
-"""
-MambaCompressor: Context-Aware Dynamic Audio Processing
-
-A professional-grade audio compressor using Mamba SSMs for temporal reasoning
-and differentiable DSP for interpretable signal processing.
-"""
+"""MambaCompressor: research code for a Mamba-driven differentiable compressor."""
 
 __version__ = "0.1.0"
-__author__ = "Lead Audio AI Architect"
-__email__ = "audio.ai@example.com"
+__author__ = "Scott Mills"
 
-from src.models.context_compressor import ContextAwareCompressor
-from src.models.mamba_tower import MambaContextTower
-from src.models.dsp_layer import DifferentiableDSPCompressor
-from src.models.mel_encoder import MelEncoder
-from src.losses.spectral_loss import MultiResolutionSTFTLoss
-from src.losses.crest_factor import CrestFactorLoss
-from src.losses.lufs_loss import LUFSLoss
-from src.data.blind_dataset import SyntheticCorruptor, BlindAudioDataset
-from src.utils.audio import load_audio, save_audio, mel_spectrogram
-from src.utils.metrics import compute_lufs, compute_crest_factor, compute_spectral_flatness
+import importlib
 
-__all__ = [
-    # Models
-    "ContextAwareCompressor",
-    "MambaContextTower",
-    "DifferentiableDSPCompressor",
-    "MelEncoder",
-    # Losses
-    "MultiResolutionSTFTLoss",
-    "CrestFactorLoss",
-    "LUFSLoss",
-    # Data
-    "SyntheticCorruptor",
-    "BlindAudioDataset",
-    # Utilities
-    "load_audio",
-    "save_audio",
-    "mel_spectrogram",
-    "compute_lufs",
-    "compute_crest_factor",
-    "compute_spectral_flatness",
-]
+_LAZY = {
+    "ContextAwareCompressor": "src.models.context_compressor",
+    "MambaContextTower": "src.models.mamba_tower",
+    "DifferentiableDSPCompressor": "src.models.dsp_layer",
+    "MelEncoder": "src.models.mel_encoder",
+    "MultiResolutionSTFTLoss": "src.losses.spectral_loss",
+    "CrestFactorLoss": "src.losses.crest_factor",
+    "LUFSLoss": "src.losses.lufs_loss",
+    "SyntheticCorruptor": "src.data.blind_dataset",
+    "BlindAudioDataset": "src.data.blind_dataset",
+    "load_audio": "src.utils.audio",
+    "save_audio": "src.utils.audio",
+    "mel_spectrogram": "src.utils.audio",
+    "compute_lufs": "src.utils.metrics",
+    "compute_crest_factor": "src.utils.metrics",
+    "compute_spectral_flatness": "src.utils.metrics",
+}
+
+
+def __getattr__(name):
+    # Lazy imports so that importing one module (e.g. the DSP layer on a CPU-only
+    # machine) doesn't pull in mamba-ssm, which needs CUDA.
+    if name in _LAZY:
+        return getattr(importlib.import_module(_LAZY[name]), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+__all__ = list(_LAZY)
