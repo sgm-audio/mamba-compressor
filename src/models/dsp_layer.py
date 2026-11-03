@@ -20,7 +20,7 @@ class DifferentiableDSPCompressor(nn.Module):
     Args:
         sample_rate: Audio sample rate in Hz (default: 44100)
         hop_length: Hop length for frame-to-sample conversion (default: 512)
-        lookahead_frames: Number of frames for lookahead buffer (default: 4)
+        lookahead_frames: Gain lookahead in frames (default: 4 = 2048 samples at hop 512)
     """
     
     def __init__(
@@ -120,13 +120,18 @@ class DifferentiableDSPCompressor(nn.Module):
             align_corners=False,
         ).squeeze(1)  # (B, T_samples)
         
-        # Apply lookahead: shift gain envelope forward
+        # Lookahead: apply each gain value `lookahead_samples` EARLIER than the
+        # frame it was predicted for, so gain reduction starts before the
+        # transient. This is the offline equivalent of delaying the audio by
+        # `lookahead_samples` (which a streaming version would have to do and
+        # report as latency). The tail is held at the last gain value.
+        # (Before 2026-10-31 this padded at the front, which delayed the gain
+        # and made it land ~lookahead_samples late; see tests/test_dsp_layer.py.)
         if self.lookahead_samples > 0:
-            gain_upsampled = F.pad(
-                gain_upsampled[:, :-self.lookahead_samples],
-                (self.lookahead_samples, 0),
-                mode="replicate",
-            )
+            L = min(self.lookahead_samples, T_samples - 1)
+            if L > 0:
+                tail = gain_upsampled[:, -1:].expand(-1, L)
+                gain_upsampled = torch.cat([gain_upsampled[:, L:], tail], dim=1)
         
         # Upsample attack/release coefficients
         attack_coeff = self._ms_to_coeff(

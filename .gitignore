@@ -158,3 +158,18 @@ assets/
 *.png
 *.onnx
 *.ckpt
+
+# --- sgm-audio cleanup ---
+checkpoints/
+lightning_logs/
+wandb/
+outputs/
+datasets/
+*.pt
+*.ckpt
+*.onnx
+*.wav
+*.flac
+.venv/
+.ruff_cache/
+.pytest_cache/
