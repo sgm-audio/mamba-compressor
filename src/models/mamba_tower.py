@@ -2,7 +2,10 @@
 
 import torch
 import torch.nn as nn
-from mamba_ssm import Mamba
+try:
+    from mamba_ssm import Mamba
+except ImportError:  # mamba-ssm needs a CUDA build; DSP-only use and CPU tests don't need it
+    Mamba = None
 from typing import Optional
 
 
@@ -35,6 +38,11 @@ class MambaContextTower(nn.Module):
         dropout: float = 0.1,
     ):
         super().__init__()
+        if Mamba is None:
+            raise ImportError(
+                "MambaContextTower needs mamba-ssm (CUDA build). Install it with "
+                "`pip install mamba-ssm causal-conv1d` on a machine with a CUDA GPU."
+            )
         self.d_model = d_model
         self.n_layers = n_layers
         
@@ -85,20 +93,10 @@ class MambaContextTower(nn.Module):
         Returns:
             Tuple of (output tensor, new states)
         """
-        if states is None:
-            states = [None] * self.n_layers
-        
-        new_states = []
-        
-        for i, layer in enumerate(self.layers):
-            mamba, norm, dropout = layer[0], layer[1], layer[2]
-            
-            # Mamba with state
-            x_res, state = mamba.forward_with_state(x, states[i])
-            x = x + x_res
-            x = norm(x)
-            x = dropout(x)
-            
-            new_states.append(state)
-        
-        return x, new_states
+        # mamba_ssm.Mamba has no forward_with_state(); the previous code called it
+        # and would raise AttributeError on the first chunk. Streaming needs
+        # Mamba.step() + allocate_inference_cache() and a GPU to verify, so it
+        # is not implemented yet.
+        raise NotImplementedError(
+            "Streaming inference is not implemented. Use forward() on whole clips."
+        )
